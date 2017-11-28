@@ -79,7 +79,7 @@ set(CUDA_MIN_VERSION "7.0")
 if(CUDA_ENABLED)
     find_package(CUDA ${CUDA_MIN_VERSION} QUIET)
 endif()
-
+MESSAGE(STATUS "Cuda found - CUDA_FOUND ${CUDA_FOUND}, Version: ${CUDA_VERSION_STRING}")
 find_package(Qt5 REQUIRED)
 
 

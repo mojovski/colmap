@@ -17,6 +17,7 @@
 #ifndef COLMAP_SRC_MVS_PATCH_MATCH_H_
 #define COLMAP_SRC_MVS_PATCH_MATCH_H_
 
+#include <fstream>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -165,6 +166,8 @@ class PatchMatch {
 
     // Print the configuration to stdout.
     void Print() const;
+    void ExportParam(std::unique_ptr<colmap::mvs::Workspace>& workspace, std::string prefix_path) const;
+
   };
 
   PatchMatch(const Options& options, const Problem& problem);

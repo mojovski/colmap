@@ -76,6 +76,114 @@ void PatchMatch::Problem::Print() const {
   }
 }
 
+/*Export the current problem to param files 
+*/
+void PatchMatch::Problem::ExportParam(std::unique_ptr<colmap::mvs::Workspace>& workspace, std::string prefix_path) const {
+  std::stringstream ss;
+  const Image& ref_image = this->images->at(ref_image_id);
+  const auto& model = workspace->GetModel();
+  const std::string image_name = model.GetImageName(ref_image_id);
+
+  ss << "tiff_color=" << image_name << "\n";
+  ss << "camera.nr=" << ref_image_id << "\n";
+  ss << "tiff_offset.x()=0\n";
+  ss << "tiff_offset.y()=0\n";
+  ss << "camera.width=" << ref_image.GetWidth() << "\n";
+  ss << "camera.height="<< ref_image.GetHeight() << "\n";
+  ss << "PixelSize_width=0.01 # mm  \n";
+  ss << "PixelSize_height=0.01 #mm \n";
+  //convert the image pose 
+  //translation
+  const float* T=ref_image.GetT();
+  ss << "camera.T=[ ";
+  for (int i=0; i<3; i++)
+  {
+    ss << T[i];
+    if (i==2)
+    {
+      ss << " ";
+    }
+     else {
+      if (((i+1)%3)==0)
+      {
+        ss << ";";
+      }
+    }
+  }
+  ss << "]\n";
+  //rotation
+  const float* R=ref_image.GetR();
+  ss << "camera.R=[ ";
+  for (int i=0; i<9; i++)
+  {
+    ss << R[i];
+    if (i==8)
+    {
+      ss << " ";
+    } else {
+      if (((i+1)%3)==0)
+      {
+        ss << ";";
+      }
+    }
+  }
+  ss << "]\n";
+
+  //export the distortion params, you will need to undistort images manually!!!
+  ss << "camera.k1=0";
+  ss << "camera.k2=0";
+  ss << "camera.k3=0";
+
+  //camera matrix
+  ss << "camera.A=[ "; //4234.34153932 0 3684.1199;0 4234.34153932 2445.9899;0 0 1 ]
+  const float* A=ref_image.GetK();
+  for (int i=0; i<9; i++)
+  {
+    ss << A[i];
+    if (i==8)
+    {
+      ss << " ";
+    }
+     else {
+      if (((i+1)%3)==0)
+      {
+        ss << ";";
+      }
+    }
+  }
+  ss << "]\n";
+
+  //min, max depth
+  /*
+  patch_match_options.depth_min = depth_ranges_.at(problem.ref_image_id).first;
+  patch_match_options.depth_max = depth_ranges_.at(problem.ref_image_id).second;
+  */
+  std::vector<std::pair<float, float>> depth_ranges_ = workspace->GetModel().ComputeDepthRanges();
+  ss << "camera.zmax=" << depth_ranges_.at(ref_image_id).second;
+  ss << "camera.zmin=" << depth_ranges_.at(ref_image_id).first;
+
+  //camera.match=201305534_param.txt,201305535_param.txt,201305815_param.txt,201305579_param.txt,201305580_param.txt,201305809_param.txt,201305581_param.txt,201305813_param.txt,201305587_param.txt,201305536_param.txt,201305578_param.txt,201305811_param.txt,201305812_param.txt,201305588_param.txt,201305586_param.txt,201305577_param.txt
+
+  ss << "camera.match=";
+  if (!src_image_ids.empty()) {
+    for (size_t i = 0; i < src_image_ids.size() - 1; ++i) {
+      ss << src_image_ids[i] << "_param.txt,";
+    }
+    ss << src_image_ids.back() << "\n";
+  } else {
+    ss << std::endl;
+  }
+
+  std::string sout;
+  sout=ss.str();
+
+  std::ofstream myfile;
+  std::string out_path=prefix_path+std::to_string(ref_image_id)+"_param.txt";
+  myfile.open (out_path);
+  myfile << sout;
+  myfile.close();
+}
+
 void PatchMatch::Check() const {
   CHECK(options_.Check());
 
@@ -404,8 +512,16 @@ void PatchMatchController::ProcessProblem(const PatchMatch::Options& options,
   const std::string image_name = model.GetImageName(problem.ref_image_id);
   const std::string file_name =
       StringPrintf("%s.%s.bin", image_name.c_str(), output_type.c_str());
+
+  const std::string dlr_param_file_name =
+      StringPrintf("%s_param.txt", std::to_string(problem.ref_image_id).c_str());
+
   const std::string depth_map_path =
       JoinPaths(workspace_path_, stereo_folder, "depth_maps", file_name);
+
+  const std::string dlr_params_path =
+      JoinPaths(workspace_path_, stereo_folder, "dlr_params", dlr_param_file_name);
+
   const std::string normal_map_path =
       JoinPaths(workspace_path_, stereo_folder, "normal_maps", file_name);
   const std::string consistency_graph_path = JoinPaths(
@@ -453,6 +569,9 @@ void PatchMatchController::ProcessProblem(const PatchMatch::Options& options,
   }
 
   problem.Print();
+  //TODO: Export param files here???
+  //
+  problem.ExportParam(workspace_, dlr_params_path);
 
   auto patch_match_options = options;
   patch_match_options.depth_min = depth_ranges_.at(problem.ref_image_id).first;
@@ -470,6 +589,7 @@ void PatchMatchController::ProcessProblem(const PatchMatch::Options& options,
 
   patch_match.GetDepthMap().Write(depth_map_path);
   patch_match.GetNormalMap().Write(normal_map_path);
+  patch_match.GetNormalMap().ToBitmap().Write(depth_map_path+".png");
   if (options.write_consistency_graph) {
     patch_match.GetConsistencyGraph().Write(consistency_graph_path);
   }
