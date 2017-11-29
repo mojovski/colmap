@@ -101,12 +101,14 @@ void PatchMatch::Problem::ExportParam(std::unique_ptr<colmap::mvs::Workspace>& w
     ss << T[i];
     if (i==2)
     {
-      ss << " ";
+      ss << "";
     }
      else {
       if (((i+1)%3)==0)
       {
         ss << ";";
+      } else {
+        ss << " ";
       }
     }
   }
@@ -119,20 +121,22 @@ void PatchMatch::Problem::ExportParam(std::unique_ptr<colmap::mvs::Workspace>& w
     ss << R[i];
     if (i==8)
     {
-      ss << " ";
+      ss << "";
     } else {
       if (((i+1)%3)==0)
       {
         ss << ";";
+      }else {
+        ss << " ";
       }
     }
   }
   ss << "]\n";
 
   //export the distortion params, you will need to undistort images manually!!!
-  ss << "camera.k1=0";
-  ss << "camera.k2=0";
-  ss << "camera.k3=0";
+  ss << "camera.k1=0\n";
+  ss << "camera.k2=0\n";
+  ss << "camera.k3=0\n";
 
   //camera matrix
   ss << "camera.A=[ "; //4234.34153932 0 3684.1199;0 4234.34153932 2445.9899;0 0 1 ]
@@ -142,12 +146,14 @@ void PatchMatch::Problem::ExportParam(std::unique_ptr<colmap::mvs::Workspace>& w
     ss << A[i];
     if (i==8)
     {
-      ss << " ";
+      ss << "";
     }
      else {
       if (((i+1)%3)==0)
       {
         ss << ";";
+      }else {
+        ss << " ";
       }
     }
   }
@@ -159,8 +165,8 @@ void PatchMatch::Problem::ExportParam(std::unique_ptr<colmap::mvs::Workspace>& w
   patch_match_options.depth_max = depth_ranges_.at(problem.ref_image_id).second;
   */
   std::vector<std::pair<float, float>> depth_ranges_ = workspace->GetModel().ComputeDepthRanges();
-  ss << "camera.zmax=" << depth_ranges_.at(ref_image_id).second;
-  ss << "camera.zmin=" << depth_ranges_.at(ref_image_id).first;
+  ss << "camera.zmax=" << depth_ranges_.at(ref_image_id).second << "\n";
+  ss << "camera.zmin=" << depth_ranges_.at(ref_image_id).first << "\n";
 
   //camera.match=201305534_param.txt,201305535_param.txt,201305815_param.txt,201305579_param.txt,201305580_param.txt,201305809_param.txt,201305581_param.txt,201305813_param.txt,201305587_param.txt,201305536_param.txt,201305578_param.txt,201305811_param.txt,201305812_param.txt,201305588_param.txt,201305586_param.txt,201305577_param.txt
 
@@ -169,7 +175,7 @@ void PatchMatch::Problem::ExportParam(std::unique_ptr<colmap::mvs::Workspace>& w
     for (size_t i = 0; i < src_image_ids.size() - 1; ++i) {
       ss << src_image_ids[i] << "_param.txt,";
     }
-    ss << src_image_ids.back() << "\n";
+    ss << src_image_ids.back() << "_param.txt\n";
   } else {
     ss << std::endl;
   }
@@ -520,7 +526,7 @@ void PatchMatchController::ProcessProblem(const PatchMatchOptions& options,
       JoinPaths(workspace_path_, stereo_folder, "depth_maps", file_name);
 
   const std::string dlr_params_path =
-      JoinPaths(workspace_path_, stereo_folder, "dlr_params", dlr_param_file_name);
+      JoinPaths(workspace_path_, stereo_folder, "dlr_params/");//, dlr_param_file_name);
 
   const std::string normal_map_path =
       JoinPaths(workspace_path_, stereo_folder, "normal_maps", file_name);
